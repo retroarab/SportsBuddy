@@ -1,0 +1,174 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+enum ConnectionStatus {
+  pending
+  accepted
+  declined
+}
+
+enum SkillLevelType {
+  beginner
+  intermediate
+  advanced
+}
+model User {
+  user_id            Int               @id @default(autoincrement())
+  username           String            @unique
+  email              String            @unique
+  password           String
+  full_name          String?
+  phone_number       String?
+  location           String?
+  skill_level        SkillLevelType
+  preferred_sport    String?
+  availability       String?
+  profile_picture_url String?
+  created_at         DateTime          @default(now())
+
+  activities         Activity[]        @relation("ActivityCreator")
+  activityParticipants ActivityParticipant[]
+  connections        UserConnection[]  @relation("UserConnectionUser") // updated relation name
+  friendConnections  UserConnection[]  @relation("UserConnectionFriend") // new field for friend connections
+  groups             Group[]           @relation("GroupCreator")
+  groupMembers       GroupMember[]
+  messagesSent       Message[]         @relation("MessageSender")
+  messagesReceived   Message[]         @relation("MessageReceiver")
+  notifications      Notification[]
+  reviews            Review[]
+}
+
+model Sport {
+  sport_id    Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+
+  activities  Activity[]
+  venues      Venue[]
+}
+
+model Venue {
+  venue_id      Int      @id @default(autoincrement())
+  name          String
+  location      String?
+  sport_id      Int
+  availability  String?
+  rental_cost   Decimal
+  contact_info  String?
+  avg_rating    Float?   // Optional average rating
+
+  sport         Sport    @relation(fields: [sport_id], references: [sport_id])
+  activities    Activity[]
+  reviews       Review[]
+}
+
+model Activity {
+  activity_id    Int       @id @default(autoincrement())
+  creator_id     Int
+  sport_id       Int
+  venue_id       Int?
+  activity_date  DateTime
+  activity_time  DateTime
+  max_players    Int
+  current_players Int     @default(0)
+  description    String?
+  created_at     DateTime @default(now())
+
+  creator        User     @relation("ActivityCreator", fields: [creator_id], references: [user_id])
+  sport          Sport    @relation(fields: [sport_id], references: [sport_id])
+  venue          Venue?   @relation(fields: [venue_id], references: [venue_id])
+  participants   ActivityParticipant[]
+  reviews        Review[]
+}
+
+model ActivityParticipant {
+  activity_id  Int
+  user_id      Int
+  joined_at    DateTime @default(now())
+
+  activity     Activity @relation(fields: [activity_id], references: [activity_id])
+  user         User     @relation(fields: [user_id], references: [user_id])
+
+  @@id([activity_id, user_id])
+}
+
+model UserConnection {
+  user_id            Int
+  friend_id          Int
+  connection_status  ConnectionStatus
+  requested_at       DateTime @default(now())
+
+  user               User @relation("UserConnectionUser", fields: [user_id], references: [user_id])
+  friend             User @relation("UserConnectionFriend", fields: [friend_id], references: [user_id])
+
+  @@id([user_id, friend_id])
+}
+
+
+model Message {
+  message_id  Int       @id @default(autoincrement())
+  sender_id   Int
+  receiver_id Int
+  content     String
+  sent_at     DateTime  @default(now())
+
+  sender      User @relation("MessageSender", fields: [sender_id], references: [user_id])
+  receiver    User @relation("MessageReceiver", fields: [receiver_id], references: [user_id])
+}
+
+model Notification {
+  notification_id Int      @id @default(autoincrement())
+  user_id         Int
+  message         String
+  read            Boolean  @default(false)
+  created_at      DateTime @default(now())
+
+  user            User     @relation(fields: [user_id], references: [user_id])
+}
+model Review {
+  review_id    Int      @id @default(autoincrement())
+  user_id      Int
+  venue_id     Int
+  activity_id  Int?
+  rating       Int
+  review_text  String?
+  created_at   DateTime @default(now())
+
+  user         User     @relation(fields: [user_id], references: [user_id])
+  venue        Venue    @relation(fields: [venue_id], references: [venue_id])
+  activity     Activity? @relation(fields: [activity_id], references: [activity_id]) // make optional
+}
+
+
+model Group {
+  group_id    Int       @id @default(autoincrement())
+  group_name  String
+  creator_id  Int
+  description String?
+  created_at  DateTime  @default(now())
+
+  creator     User      @relation("GroupCreator", fields: [creator_id], references: [user_id])
+  members     GroupMember[]
+}
+
+model GroupMember {
+  group_id    Int
+  user_id     Int
+  joined_at   DateTime @default(now())
+
+  group       Group    @relation(fields: [group_id], references: [group_id])
+  user        User     @relation(fields: [user_id], references: [user_id])
+
+  @@id([group_id, user_id])
+}
