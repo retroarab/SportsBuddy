@@ -10,22 +10,26 @@ exports.listVenues = async (req, res) => {
 };
 
 exports.addVenue = async (req, res) => {
-  const { name, location, sport, rentalCost, contactInfo } = req.body;
+  const { name, location, sport_id, availability, rentalCost, contactInfo } = req.body;
+
   try {
     const venue = await prisma.venue.create({
       data: {
         name,
         location,
-        sport,
-        rentalCost,
-        contactInfo,
+        sport_id, // Match the foreign key field in your schema
+        availability,
+        rental_cost: rentalCost, // Match the exact column name in your schema
+        contact_info: contactInfo, // Match the exact column name in your schema
       },
     });
     res.status(201).json(venue);
   } catch (error) {
+    console.error('Error in addVenue:', error);
     res.status(500).json({ error: 'Failed to add venue' });
   }
 };
+
 
 exports.getVenueDetails = async (req, res) => {
   const { id } = req.params;
